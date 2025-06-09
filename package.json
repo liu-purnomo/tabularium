@@ -1,0 +1,46 @@
+{
+  "name": "tabularium",
+  "version": "1.0.0",
+  "description": "A dynamic synchronization tool for automatically syncing data from Google Sheets into PostgreSQL tables, with customizable intervals and structure-less data ingestion.",
+  "main": "app.js",
+  "keywords": [
+    "google-sheets",
+    "postgresql",
+    "sync",
+    "sheet-sync",
+    "data-pipeline",
+    "sheet-to-sql",
+    "automation",
+    "cron",
+    "nodejs",
+    "express"
+  ],
+  "scripts": {
+    "dev": "nodemon app.js",
+    "start": "node app.js",
+    "migrate": "node src/db/migrate.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liu-purnomo/tabularium.git"
+  },
+  "author": "liupurnomo.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/liu-purnomo/tabularium/issues"
+  },
+  "homepage": "https://github.com/liu-purnomo/tabularium#readme",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1",
+    "google-sheet-crud": "^1.10.4",
+    "node-cron": "^4.1.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "type": "module"
+}

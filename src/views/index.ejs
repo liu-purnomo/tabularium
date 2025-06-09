@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tabularium</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="p-4">
+    <div class="container mx-auto" style="max-width: 960px">
+      <h1 class="mb-4">📄 Tabularium – Sheet Sync Dashboard</h1>
+
+      <% if (alert) { %>
+      <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <%= alert %>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+          aria-label="Close"
+        ></button>
+      </div>
+      <% } %>
+
+      <form class="mb-4" action="/syncs" method="POST" novalidate>
+        <div class="mb-2">
+          <label class="form-label">Title<span class="text-danger">*</span></label>
+          <input
+            type="text"
+            name="title"
+            class="form-control"
+            value="<%= old?.title || '' %>"
+            required
+          />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="2">
+<%= old?.description || '' %></textarea
+          >
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Sheet ID<span class="text-danger">*</span>
+            
+          </label>
+          <input
+            type="text"
+            name="sheet_id"
+            class="form-control"
+            value="<%= old?.sheet_id || '' %>"
+            required
+          />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Range<span class="text-danger">*</span></label>
+          <input
+            type="text"
+            name="range"
+            class="form-control"
+            placeholder="e.g. NS!A1:G"
+            value="<%= old?.range || '' %>"
+            required
+          />
+        </div>
+        <div class="mb-2">
+            <label class="form-label">Interval<span class="text-danger">*</span></label>
+            <div class="input-group">
+                <input
+                type="number"
+                name="interval_value"
+                class="form-control"
+                min="1"
+                required
+                placeholder="e.g. 5"
+                value="<%= old?.interval_value || '' %>"
+                />
+                <select name="interval_unit" class="form-select" required>
+                <option value="m" <%= old?.interval_unit === 'm' || !old?.interval_unit ? 'selected' : '' %>>Minutes</option>
+                <option value="h" <%= old?.interval_unit === 'h' ? 'selected' : '' %>>Hours</option>
+                <option value="d" <%= old?.interval_unit === 'd' ? 'selected' : '' %>>Days</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Target Table<span class="text-danger">*</span></label>
+          <input
+            type="text"
+            name="target_table"
+            class="form-control"
+            placeholder="e.g. assets, inventory_data"
+            value="<%= old?.target_table || '' %>"
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary">➕ Add Sync</button>
+      </form>
+
+      <h2>🔁 Existing Sync Configurations</h2>
+      <ul class="list-group">
+        <% syncs.forEach(sync => { %>
+        <li class="list-group-item">
+          <div class="row align-items-start">
+            <div class="col-md-10">
+              <h5 class="text-primary mb-1">
+                <strong><%= sync.title %></strong> — <%= sync.target_table %>
+              </h5>
+              <small class="text-muted d-block">
+                Every <%= sync.interval %> · Sheet: <%= sync.sheet_id %> [<%=
+                sync.range %>]
+              </small>
+              <% if (sync.last_synced_at) { %>
+              <small class="text-success d-block">
+                ✅ Last synced: <%= new
+                Date(sync.last_synced_at).toLocaleString() %>
+              </small>
+              <% } else { %>
+              <small class="text-danger d-block"> ⏳ Never synced </small>
+              <% } %> <% if (sync.description) { %>
+              <small class="d-block"><%= sync.description %></small>
+              <% } %>
+            </div>
+            <div class="col-md-2 d-flex flex-column gap-2">
+              <a
+                href="/syncs/<%= sync.id %>/edit"
+                class="btn btn-sm btn-warning"
+                >✏️ Edit</a
+              >
+              <form action="/syncs/<%= sync.id %>/sync" method="POST">
+                <button type="submit" class="btn btn-sm w-100 btn-success">
+                  🔄 Sync Now
+                </button>
+              </form>
+              <form action="/syncs/<%= sync.id %>/delete" method="POST">
+                <button type="submit" class="btn btn-sm w-100 btn-danger">
+                  ❌ Delete
+                </button>
+              </form>
+            </div>
+          </div>
+        </li>
+        <% }) %>
+      </ul>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
