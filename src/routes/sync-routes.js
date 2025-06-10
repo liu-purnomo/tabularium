@@ -115,7 +115,7 @@ syncRouter.post('/syncs', async (req, res) => {
         old: req.body,
       });
     }
-    console.error('❌ Failed to insert sync config:', err);
+    // console.error('❌ Failed to insert sync config:', err);
     req.session.alert = '❌ Failed to save sync config.';
     return res.redirect('/');
   }
@@ -143,7 +143,7 @@ syncRouter.post('/syncs', async (req, res) => {
     )`;
 
     await pool.query(createSQL);
-    console.log(`🛠️ Created table "${target_table}" with inferred structure`);
+    // console.log(`🛠️ Created table "${target_table}" with inferred structure`);
   } else {
     req.session.alert = `⚠️ Table "${target_table}" already exists. Configuration saved only.`;
   }
@@ -199,10 +199,10 @@ syncRouter.post('/syncs/:id/delete', async (req, res) => {
     await pool.query(`DROP TABLE IF EXISTS "${tableName}"`);
     await pool.query('DELETE FROM sheet_syncs WHERE id = $1', [id]);
 
-    console.log(`🗑️ Dropped table "${tableName}"`);
+    // console.log(`🗑️ Dropped table "${tableName}"`);
     req.session.alert = `✅ Deleted sync config and table "${tableName}".`;
   } catch (err) {
-    console.error('❌ Failed to delete sync config:', err);
+    // console.error('❌ Failed to delete sync config:', err);
     req.session.alert = '❌ Failed to delete sync config.';
   }
 
@@ -261,7 +261,7 @@ syncRouter.post('/syncs/:id/sync', async (req, res) => {
 
     req.session.alert = `✅ Manual sync to "${target_table}" succeeded.`;
   } catch (err) {
-    console.error('❌ Manual sync error:', err);
+    // console.error('❌ Manual sync error:', err);
     req.session.alert = '❌ Failed to sync data manually.';
   } finally {
     await pool.query(
