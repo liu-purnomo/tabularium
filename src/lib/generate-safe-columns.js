@@ -1,3 +1,5 @@
+import { slugify } from './slugify.js';
+
 export function generateSafeColumns(headers) {
   const seen = new Map();
   const result = [];
