@@ -1,5 +1,6 @@
 import express from 'express';
 import { pool } from '../db/index.js';
+import { generateSafeColumns } from '../lib/generate-safe-columns.js';
 import { Sheet } from '../lib/google-sheet.js';
 import { requireLogin } from '../middleware/require-login.js';
 
@@ -93,7 +94,8 @@ syncRouter.post('/syncs', async (req, res) => {
     );
     return res.render('index', {
       syncs: syncs.rows,
-      alert: `❌ Failed to access Google Sheet. Please check the Sheet ID and range.`,
+      alert:
+        '❌ Failed to access Google Sheet. Please check the Sheet ID and range.',
       old: req.body,
     });
   }
@@ -115,24 +117,22 @@ syncRouter.post('/syncs', async (req, res) => {
         old: req.body,
       });
     }
-    // console.error('❌ Failed to insert sync config:', err);
     req.session.alert = '❌ Failed to save sync config.';
     return res.redirect('/');
   }
 
   const tableCheck = await pool.query(
-    `SELECT EXISTS (
-      SELECT FROM information_schema.tables WHERE table_name = $1
-    )`,
+    `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)`,
     [target_table]
   );
 
   if (!tableCheck.rows[0].exists) {
     const headers = Object.keys(previewData[0]);
+    const safeColumnNames = generateSafeColumns(headers);
     const firstRow = previewData[0];
-    const columns = headers.map((key) => {
-      const colName = slugify(key) === 'id' ? 'id_from_sheet' : slugify(key);
-      const colType = inferColumnType(firstRow[key]);
+    const columns = safeColumnNames.map((colName, i) => {
+      const originalKey = headers[i];
+      const colType = inferColumnType(firstRow[originalKey]);
       return `"${colName}" ${colType}`;
     });
 
@@ -143,7 +143,6 @@ syncRouter.post('/syncs', async (req, res) => {
     )`;
 
     await pool.query(createSQL);
-    // console.log(`🛠️ Created table "${target_table}" with inferred structure`);
   } else {
     req.session.alert = `⚠️ Table "${target_table}" already exists. Configuration saved only.`;
   }
@@ -235,20 +234,17 @@ syncRouter.post('/syncs/:id/sync', async (req, res) => {
 
     const { sheet_id, range, target_table } = sync;
     const data = await Sheet.read(sheet_id, range);
+    if (!data.length) throw new Error('No data to sync');
 
     await pool.query(`DELETE FROM "${target_table}"`);
 
-    const columns = Object.keys(data[0]).map((key) =>
-      slugify(key) === 'id' ? 'id_from_sheet' : slugify(key)
-    );
+    const originalKeys = Object.keys(data[0]);
+    const columnNames = generateSafeColumns(originalKeys);
 
     for (const row of data) {
-      const values = columns.map((col, i) => {
-        const originalKey = Object.keys(row)[i];
-        return row[originalKey];
-      });
+      const values = originalKeys.map((key) => row[key]);
       const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-      const sql = `INSERT INTO "${target_table}" (${columns
+      const sql = `INSERT INTO "${target_table}" (${columnNames
         .map((c) => `"${c}"`)
         .join(', ')}) VALUES (${placeholders})`;
       await pool.query(sql, values);
@@ -261,7 +257,6 @@ syncRouter.post('/syncs/:id/sync', async (req, res) => {
 
     req.session.alert = `✅ Manual sync to "${target_table}" succeeded.`;
   } catch (err) {
-    // console.error('❌ Manual sync error:', err);
     req.session.alert = '❌ Failed to sync data manually.';
   } finally {
     await pool.query(
@@ -310,10 +305,11 @@ syncRouter.get('/syncs/:id/detail', async (req, res) => {
 
     const sizeResult = await pool.query(
       `
-      SELECT pg_total_relation_size($1) AS size
-    `,
-      [`"${target_table}"`]
+  SELECT pg_total_relation_size($1) AS size
+`,
+      [target_table]
     );
+
     const fileSizeBytes = parseInt(sizeResult.rows[0].size, 10);
 
     return res.render('detail', {
