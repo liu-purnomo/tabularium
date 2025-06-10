@@ -103,9 +103,11 @@
         <li class="list-group-item">
           <div class="row align-items-start">
             <div class="col-md-10">
+              <a href="/syncs/<%= sync.id %>/detail">
               <h5 class="text-primary mb-1">
                 <strong><%= sync.title %></strong> — <%= sync.target_table %>
               </h5>
+              </a>
               <small class="text-muted d-block">
                 Every <%= sync.interval %> · Sheet: <%= sync.sheet_id %> [<%=
                 sync.range %>]

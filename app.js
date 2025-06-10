@@ -3,6 +3,7 @@ import express from 'express';
 import session from 'express-session';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { authRouter } from './src/routes/auth-routes.js';
 import { syncRouter } from './src/routes/sync-routes.js';
 
 dotenv.config();
@@ -26,9 +27,20 @@ app.use(
     secret: 'tabularium-secret',
     resave: false,
     saveUninitialized: true,
+    cookie: { secure: false },
   })
 );
 
+app.use((req, res, next) => {
+  res.locals.user = req.session.user || null;
+  res.locals.alert = req.session.alert || null;
+  res.locals.old = req.session.old || null;
+  req.session.alert = null;
+  req.session.old = null;
+  next();
+});
+
+app.use('/', authRouter);
 app.use('/', syncRouter);
 
 app.listen(PORT, () => {

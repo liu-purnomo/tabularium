@@ -1,6 +1,7 @@
 import express from 'express';
 import { pool } from '../db/index.js';
 import { Sheet } from '../lib/google-sheet.js';
+import { requireLogin } from '../middleware/require-login.js';
 
 export const syncRouter = express.Router();
 
@@ -28,6 +29,8 @@ function slugify(text) {
     .replace(/__+/g, '_')
     .toLowerCase();
 }
+
+syncRouter.use(requireLogin);
 
 syncRouter.get('/', async (req, res) => {
   const result = await pool.query('SELECT * FROM sheet_syncs ORDER BY id DESC');
@@ -269,3 +272,66 @@ syncRouter.post('/syncs/:id/sync', async (req, res) => {
 
   res.redirect('/');
 });
+
+syncRouter.get('/syncs/:id/detail', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query('SELECT * FROM sheet_syncs WHERE id = $1', [
+      id,
+    ]);
+    const sync = result.rows[0];
+
+    if (!sync) {
+      req.session.alert = '❌ Config not found.';
+      return res.redirect('/');
+    }
+
+    const { target_table } = sync;
+
+    if (!isValidTableName(target_table)) {
+      req.session.alert = '❌ Invalid table name.';
+      return res.redirect('/');
+    }
+
+    const columnsResult = await pool.query(
+      `
+      SELECT column_name AS name, data_type AS type
+      FROM information_schema.columns
+      WHERE table_name = $1
+    `,
+      [target_table]
+    );
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM "${target_table}"`
+    );
+    const rowCount = parseInt(countResult.rows[0].count, 10);
+
+    const sizeResult = await pool.query(
+      `
+      SELECT pg_total_relation_size($1) AS size
+    `,
+      [`"${target_table}"`]
+    );
+    const fileSizeBytes = parseInt(sizeResult.rows[0].size, 10);
+
+    return res.render('detail', {
+      sync,
+      count: rowCount,
+      size_bytes: fileSizeBytes,
+      size_readable: formatSize(fileSizeBytes),
+      columns: columnsResult.rows,
+    });
+  } catch (err) {
+    req.session.alert = '❌ Failed to load table detail.';
+    return res.redirect('/');
+  }
+});
+
+function formatSize(bytes) {
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  if (bytes === 0) return '0 Byte';
+  const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10);
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+}
